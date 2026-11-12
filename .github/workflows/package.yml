@@ -211,6 +211,20 @@ jobs:
         run: |
           python3 scripts/extract-files.py --section Keyboard
           python3 scripts/extract-files.py --section Video
+      - name: Allow time for the hosted Metal bridge build
+        if: inputs.os == '27'
+        working-directory: UniXNU
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          script = Path('scripts/build-adreno-metal-bridge.py')
+          source = script.read_text()
+          old = 'stderr=subprocess.STDOUT, timeout=1800)'
+          if source.count(old) != 1:
+              raise SystemExit('Unexpected timeout in pinned Metal bridge builder')
+          script.write_text(source.replace(old, 'stderr=subprocess.STDOUT, timeout=7200)'))
+          PY
       - name: package
         working-directory: device
         env:
@@ -227,6 +241,11 @@ jobs:
             fi
           fi
           scripts/package.sh "${args[@]}"
+      - name: Show Metal bridge compiler output on failure
+        if: failure() && inputs.os == '27'
+        run: |
+          log=UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/tree/build/adreno-metal-bridge/build-ios27.log
+          if [ -f "$log" ]; then tail -60 "$log"; fi
       - uses: actions/cache/save@v4
         if: always() && inputs.os == '27' && steps.data-cache.outputs.cache-hit != 'true' && hashFiles('UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr') != ''
         with:
