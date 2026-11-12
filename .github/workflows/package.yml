@@ -13,6 +13,11 @@ on:
         type: choice
         options: ["27", "26", "17"]
         default: "27"
+      runner:
+        description: "macOS runner architecture"
+        type: choice
+        options: ["macos-26", "macos-26-intel"]
+        default: "macos-26"
       init_data:
         description: "Create a NEW installation seed if no saved seed exists (iPadOS 27 only)"
         type: boolean
@@ -33,7 +38,7 @@ concurrency:
 
 jobs:
   package:
-    runs-on: macos-26
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
@@ -43,32 +48,44 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/UniXNU
-          ref: 82b847c4ac3f68a57024b3082ffa3a03442defd9 # Wi-Fi runtime and Data firmware integration
+          ref: 2366e33e4934696424bb9f5aa7598df925fbc0c1
           path: UniXNU
           submodules: recursive
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/uefi-sheng
+          ref: 66421cb7bb5694843aec8de1ca3d1de4c20cca38
           path: uefi-sheng
           submodules: recursive
+      - uses: actions/checkout@v4
+        if: inputs.os == '27'
+        with:
+          repository: UniXNU/UniXNU-sm8550-common
+          ref: 97665e28578483082b674e8375a8fa65f4cf49cf
+          path: sm8550
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        if: inputs.os == '27'
+        with:
+          repository: ks114514/UniXNU-sheng
+          ref: 6f4792fe416ea88ce0aab1bcd480b430f4807165
+          path: wifi-inputs
+          sparse-checkout: firmware/wcn7850
+          persist-credentials: false
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
-          {
-            echo "$HOME/.cargo/bin"
-            echo "/opt/homebrew/opt/llvm/bin"
-            echo "/opt/homebrew/opt/lld/bin"
-            echo "/opt/homebrew/opt/bison/bin"
-          } >> "$GITHUB_PATH"
+          llvm_bin="$(brew --prefix llvm)/bin"
+          lld_bin="$(brew --prefix lld)/bin"
+          bison_bin="$(brew --prefix bison)/bin"
+          printf '%s\n' "$HOME/.cargo/bin" "$llvm_bin" "$lld_bin" "$bison_bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.cargo/bin:$llvm_bin:$lld_bin:$bison_bin:$PATH"
           rustup toolchain install 1.98.0 --profile minimal --component rust-src
-          # Fail fast, naming the tool, before forty minutes of build.
+          # Check the tools before downloading firmware and compiling.
           ok=1
           for t in clang xcodebuild make git ninja cmake dtc fdtget fdtput aea compression_tool \
-                   mformat mcopy ipsw; do
+                   mformat mcopy ipsw lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
             command -v "$t" >/dev/null || { echo "missing tool: $t"; ok=0; }
-          done
-          for t in lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
-            [ -f "/opt/homebrew/opt/llvm/bin/$t" ] || [ -f "/opt/homebrew/opt/lld/bin/$t" ] || { echo "missing tool: $t"; ok=0; }
           done
           [ "$ok" = 1 ]
       - name: platform seed
@@ -122,6 +139,50 @@ jobs:
           if not path.is_file() and os.environ['INIT_DATA'] != 'true':
               raise SystemExit('No saved seed. Supply the ORIGINAL seed for an existing installation, or select init_data for a FIRST installation')
           PY
+      - name: Verify WCN7850 firmware against the board manifest
+        if: inputs.os == '27'
+        working-directory: device
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          destination = Path('firmware/wcn7850')
+          source = Path('../wifi-inputs/firmware/wcn7850')
+          manifest = json.loads((destination / 'manifest.json').read_text())['files']
+          for name, expected in manifest.items():
+              data = (source / name).read_bytes()
+              if len(data) != expected['bytes'] or hashlib.sha256(data).hexdigest() != expected['sha256']:
+                  raise SystemExit(f'WCN7850 firmware differs from the board manifest: {name}')
+              (destination / name).write_bytes(data)
+          PYTHON
+      - name: Prepare pinned Ath12k sources
+        if: inputs.os == '27'
+        working-directory: device/drivers/Ath12kWifi
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          lock = json.loads(Path('tools/source-lock.json').read_text())
+          Path('deps').mkdir(exist_ok=True)
+          for name in ('linux', 'freebsd'):
+              source = lock[name]
+              directory = Path('deps') / name
+              subprocess.run(['git', 'clone', '--depth', '1', '--branch', source['ref'],
+                              '--filter=blob:none', '--sparse', source['url'], str(directory)], check=True)
+              subprocess.run(['git', '-C', str(directory), 'sparse-checkout', 'set', '--no-cone',
+                              '/.unixnu-placeholder'], check=True)
+          PYTHON
+          python3 tools/fetch-sources.py
+      - name: Extract pinned keyboard and video firmware
+        if: inputs.os == '27'
+        working-directory: device
+        run: |
+          python3 scripts/extract-files.py --section Keyboard
+          python3 scripts/extract-files.py --section Video
       - name: package
         working-directory: device
         env:
@@ -131,8 +192,11 @@ jobs:
           OS_PROFILE: ${{ inputs.os }}
         run: |
           args=(--os "$OS_PROFILE" --uefi ../uefi-sheng)
-          if [ "$OS_PROFILE" = 27 ] && [ "$INIT_DATA" = true ]; then
-            args+=(--init-data)
+          if [ "$OS_PROFILE" = 27 ]; then
+            args+=(--local-module soc:sm8550=../sm8550)
+            if [ "$INIT_DATA" = true ]; then
+              args+=(--init-data)
+            fi
           fi
           scripts/package.sh "${args[@]}"
       - uses: actions/cache/save@v4
