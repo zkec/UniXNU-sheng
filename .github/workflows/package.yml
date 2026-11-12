@@ -70,13 +70,18 @@ jobs:
           llvm_bin="$(brew --prefix llvm)/bin"
           lld_bin="$(brew --prefix lld)/bin"
           bison_bin="$(brew --prefix bison)/bin"
-          printf '%s\n' "$HOME/.cargo/bin" "$llvm_bin" "$lld_bin" "$bison_bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/.cargo/bin:$llvm_bin:$lld_bin:$bison_bin:$PATH"
+          rustup_bin="$(brew --prefix rustup)/bin"
+          printf '%s\n' "$llvm_bin" "$lld_bin" "$bison_bin" "$rustup_bin" >> "$GITHUB_PATH"
+          export PATH="$rustup_bin:$llvm_bin:$lld_bin:$bison_bin:$PATH"
           rustup toolchain install 1.98.0 --profile minimal --component rust-src
+          cargo +1.98.0 --version
+          command -v unifdef >/dev/null || brew install unifdef
+          xcrun --sdk iphoneos --show-sdk-version
+          xcrun --sdk iphoneos --find mig
           # Check the tools before downloading firmware and compiling.
           ok=1
           for t in clang xcodebuild make git ninja cmake dtc fdtget fdtput aea compression_tool \
-                   mformat mcopy ipsw lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
+                   mformat mcopy ipsw ld.lld lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy unifdef; do
             command -v "$t" >/dev/null || { echo "missing tool: $t"; ok=0; }
           done
           [ "$ok" = 1 ]
