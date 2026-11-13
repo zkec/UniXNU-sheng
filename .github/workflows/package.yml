@@ -95,12 +95,13 @@ jobs:
           ref: 2366e33e4934696424bb9f5aa7598df925fbc0c1
           path: UniXNU
           submodules: recursive
-      - uses: actions/checkout@v4
+      - name: Check out pinned Sheng firmware sources
+        uses: actions/checkout@v4
         with:
           repository: UniXNU/uefi-sheng
           ref: 66421cb7bb5694843aec8de1ca3d1de4c20cca38
           path: uefi-sheng
-          submodules: recursive
+          # The firmware build initializes board.toml submodules and stages verified vendor inputs.
       - uses: actions/checkout@v4
         if: inputs.os == '27'
         with:
