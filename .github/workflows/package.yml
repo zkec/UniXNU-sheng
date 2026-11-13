@@ -225,6 +225,11 @@ jobs:
               raise SystemExit('Unexpected timeout in pinned Metal bridge builder')
           script.write_text(source.replace(old, 'stderr=subprocess.STDOUT, timeout=7200)'))
           PY
+      - name: Apply iPadOS 27 kernel link fixes
+        if: inputs.os == '27'
+        run: |
+          git apply --check device/.github/patches/ipados-27-final-link.patch
+          git apply device/.github/patches/ipados-27-final-link.patch
       - name: package
         working-directory: device
         env:
