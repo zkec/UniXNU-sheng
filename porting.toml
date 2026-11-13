@@ -21,6 +21,16 @@ next_action = ["Compare the effective status output whenever a profile, source o
 
 [[area.evidence]]
 kind = "source"
+reference = ".github/workflows/package.yml"
+result = "The iPadOS 27 workflow accepts an Intel or ARM64 macOS runner, verifies the pinned IPSW and Wi-Fi build tools and inputs, prepares the locked Ath12k sources, and pins SM8550 platform sources at 2dc650ca76ae38715cd0712e60a44b14fe251745."
+
+[[area.evidence]]
+kind = "source"
+reference = ".github/workflows/userdata.yml"
+result = "The iPadOS 27 userdata workflow builds the two root windows from Apple's 24A446 IPSW and verifies both block hash tables against the signed policy headers before uploading the image."
+
+[[area.evidence]]
+kind = "source"
 reference = "board.toml"
 result = "Implementation and configuration described in this section"
 
