@@ -66,6 +66,14 @@ jobs:
           repository: UniXNU/uefi-sheng
           path: uefi-sheng
           submodules: recursive
+      - uses: actions/checkout@v4
+        if: inputs.os == '27'
+        with:
+          repository: ks114514/UniXNU-sheng
+          ref: 6f4792fe416ea88ce0aab1bcd480b430f4807165
+          path: wifi-inputs
+          sparse-checkout: firmware/wcn7850
+          persist-credentials: false
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
@@ -86,6 +94,29 @@ jobs:
             [ -f "/opt/homebrew/opt/llvm/bin/$t" ] || [ -f "/opt/homebrew/opt/lld/bin/$t" ] || { echo "missing tool: $t"; ok=0; }
           done
           [ "$ok" = 1 ]
+      - name: Stage iPadOS 27 firmware inputs
+        if: inputs.os == '27'
+        working-directory: device
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          destination = Path('firmware/wcn7850')
+          source = Path('../wifi-inputs/firmware/wcn7850')
+          manifest = json.loads((destination / 'manifest.json').read_text())['files']
+          firmware = {}
+          for name in ('amss.bin', 'm3.bin', 'board-2.bin'):
+              expected = manifest[name]
+              data = (source / name).read_bytes()
+              if len(data) != expected['bytes'] or hashlib.sha256(data).hexdigest() != expected['sha256']:
+                  raise SystemExit(f'WCN7850 firmware differs from the board manifest: {name}')
+              firmware[name] = data
+          for name, data in firmware.items():
+              (destination / name).write_bytes(data)
+          PY
+          python3 scripts/extract-files.py --section Keyboard
       - name: platform seed
         env:
           seed: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
