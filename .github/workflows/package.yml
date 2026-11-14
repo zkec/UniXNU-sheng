@@ -46,6 +46,21 @@ jobs:
           ref: 82b847c4ac3f68a57024b3082ffa3a03442defd9 # Wi-Fi runtime and Data firmware integration
           path: UniXNU
           submodules: recursive
+      - name: Backport the Mesa diagnostics patch fix
+        working-directory: UniXNU
+        run: |
+          # Backport the new-file marker from UniXNU e7c359cd27c78e2a8893d649c6c9104acd2f97c0.
+          git apply <<'PATCH'
+          diff --git a/patches/mesa/turnip-frame-diagnostics.patch b/patches/mesa/turnip-frame-diagnostics.patch
+          --- a/patches/mesa/turnip-frame-diagnostics.patch
+          +++ b/patches/mesa/turnip-frame-diagnostics.patch
+          @@ -1,4 +1,5 @@
+           diff --git a/src/freedreno/vulkan/tu_frame_diagnostic.h b/src/freedreno/vulkan/tu_frame_diagnostic.h
+          +new file mode 100644
+           --- /dev/null
+           +++ b/src/freedreno/vulkan/tu_frame_diagnostic.h
+           @@ -0,0 +1,16 @@
+          PATCH
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/uefi-sheng

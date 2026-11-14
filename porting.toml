@@ -649,6 +649,11 @@ result = "The package workflow selects the repair UniXNU revision, restores or i
 
 [[area.evidence]]
 kind = "source"
+reference = ".github/workflows/package.yml"
+result = "The workflow backports the new-file marker from UniXNU e7c359cd27c78e2a8893d649c6c9104acd2f97c0 so the pinned Turnip patch can create tu_frame_diagnostic.h on a clean Mesa checkout."
+
+[[area.evidence]]
+kind = "source"
 reference = "board.toml"
 result = "The iPadOS 27 payload sets two environment variables for iconservicesagent in the launchd service cache."
 
