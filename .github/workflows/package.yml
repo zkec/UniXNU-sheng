@@ -117,6 +117,27 @@ jobs:
               (destination / name).write_bytes(data)
           PY
           python3 scripts/extract-files.py --section Keyboard
+      - name: Fetch locked Ath12k and supplicant sources
+        if: inputs.os == '27'
+        working-directory: device/drivers/Ath12kWifi
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          lock = json.loads(Path('tools/source-lock.json').read_text())
+          Path('deps').mkdir(exist_ok=True)
+          for name in ('linux', 'freebsd'):
+              source = lock[name]
+              directory = Path('deps') / name
+              subprocess.run(['git', 'clone', '--depth', '1', '--branch', source['ref'],
+                              '--filter=blob:none', '--sparse', source['url'], str(directory)], check=True)
+              # Keep unrelated case-colliding kernel headers out of the macOS checkout.
+              subprocess.run(['git', '-C', str(directory), 'sparse-checkout', 'set', '--no-cone',
+                              '/.unixnu-placeholder'], check=True)
+          PY
+          python3 tools/fetch-sources.py
       - name: platform seed
         env:
           seed: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
