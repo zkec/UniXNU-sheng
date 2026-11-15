@@ -37,7 +37,7 @@ result = "The iPadOS 27 package workflow guards macOS-only code-signing, Etherne
 [[area.evidence]]
 kind = "source"
 reference = "configs/sheng_ipados27_defconfig"
-result = "The iPadOS 27 defconfig adds -Os to reduce native text in the 24A446 collection. When the Data seed is available, the workflow runs the normal kernel prelink checks before building the runtime addon and reports the linked segment sizes on failure."
+result = "The iPadOS 27 defconfig adds -Os to reduce native text in the 24A446 collection. When the Data seed is available, the workflow uses release --check to fetch all references, including IOHIDFamily, before validating kernel prelink. It reports linked segment sizes on failure."
 
 [[area.evidence]]
 kind = "source"

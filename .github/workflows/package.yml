@@ -202,7 +202,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           seed=out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr
-          ./unixnu defconfig sheng_ipados27_defconfig -D ../device --os 27
+          ./unixnu release --check -D ../device --os 27 --uefi ../uefi-sheng
           ./unixnu build kernel -D ../device --os 27 --data-ramdisk "$seed"
       - name: package
         working-directory: device
