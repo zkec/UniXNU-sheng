@@ -27,7 +27,7 @@ result = "Implementation and configuration described in this section"
 [[area.evidence]]
 kind = "source"
 reference = ".github/workflows/package.yml"
-result = "The package workflow applies the upstream Mesa patch-format correction to the pinned UniXNU checkout and stages verified WCN7850 and keyboard firmware plus the locked Ath12k and supplicant sources before compiling iPadOS 27."
+result = "The iPadOS 27 workflow pins UniXNU 0b6fa93eb48c0cc16e0a4647348730a2e210f418 for the Bluetooth, video and AppSync runtime builders. The board pins SM8550 2dc650ca76ae38715cd0712e60a44b14fe251745 for the GENI UART, QUP DMA and video clock sources."
 
 [[area.evidence]]
 kind = "source"
@@ -154,6 +154,11 @@ reference = "https://github.com/UniXNU/ShengUfs/blob/e2b32cc429e8cf1501161c1d8c5
 result = "Implementation and configuration described in this section"
 
 [[area.evidence]]
+kind = "source"
+reference = "https://github.com/UniXNU/ShengUfs/tree/b6fe07b307eeddc5e258c9d5d4387b968a55e4e9"
+result = "The ShengUfs gitlink follows the source revision selected by the upstream sheng build alignment."
+
+[[area.evidence]]
 kind = "host"
 reference = "reports/ipados26-source-drivers.json"
 command = "cd ../UniXNU && python3 scripts/build-sheng-source-drivers.py --tree out/sheng/ipados-26.5.2-23F84/sheng_ipados26/tree --device ../UniXNU-sheng --storage-source out/driver-sources/IOStorageFamily --hid-source out/driver-sources/IOHIDFamily --with-storage-family"
@@ -217,6 +222,11 @@ next_action = ["Attach contact and orientation observations when firmware or geo
 kind = "source"
 reference = "package/BootDiagExport.c"
 result = "The joint latency capture exports vsync tick events and CPU frequency windows alongside HID report times. Exact user-stack samples are marked with peer -2."
+
+[[area.evidence]]
+kind = "source"
+reference = "https://github.com/UniXNU/ShengNovatekTouch/tree/69fdd6223ed2572aa8bd8351e77c53a238276130"
+result = "The touch driver gitlink matches the upstream sheng build-alignment revision."
 
 [[area.evidence]]
 kind = "host"
@@ -478,6 +488,11 @@ limits = ["Current-image device checks pending: cancellation/timeout completion,
 next_action = ["Complete the pending device checks and tune packet processing, scheduling and power from the measured results."]
 
 [[area.evidence]]
+kind = "source"
+reference = "https://github.com/UniXNU/Ath12kWifi/commit/39cc47b7bd1afef3c03a977c0c06fe475199ac0c"
+result = "The Ath12kWifi gitlink selects the source fetcher with support for normalized sparse checkout paths."
+
+[[area.evidence]]
 kind = "host"
 reference = "scripts/build-wifi-userspace.py"
 command = "python3 scripts/build-wifi-userspace.py OUT ios27"
@@ -654,7 +669,7 @@ result = "The package workflow selects the repair UniXNU revision, restores or i
 [[area.evidence]]
 kind = "source"
 reference = ".github/workflows/package.yml"
-result = "The workflow backports the new-file marker from UniXNU e7c359cd27c78e2a8893d649c6c9104acd2f97c0 so the pinned Turnip patch can create tu_frame_diagnostic.h on a clean Mesa checkout. It checks the WCN7850 binaries against the board manifest and fetches the pinned keyboard firmware for the display archive. It resolves the locked Ath12k and supplicant sources before the Wi-Fi builder checks them."
+result = "The iPadOS 27 workflow selects a UniXNU pin with the Turnip patch-format fix and prepares the locked Ath12k and supplicant sources. It checks the WCN7850 firmware against the board manifest and fetches the pinned keyboard and VPU firmware for the display archive and Data addon."
 
 [[area.evidence]]
 kind = "source"
@@ -688,6 +703,11 @@ next_action = ["Add captured host or device evidence when repeating a checkpoint
 kind = "source"
 reference = "scripts/read-sheng-log.py"
 result = "Implementation and configuration described in this section"
+
+[[area.evidence]]
+kind = "source"
+reference = "unixnu.lock"
+result = "The source lock records the same SM8550 build input as feeds.toml."
 
 [[area.evidence]]
 kind = "host"
