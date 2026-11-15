@@ -47,6 +47,9 @@ jobs:
           ref: ${{ inputs.os == '27' && '0b6fa93eb48c0cc16e0a4647348730a2e210f418' || '82b847c4ac3f68a57024b3082ffa3a03442defd9' }}
           path: UniXNU
           submodules: recursive
+      - name: Fix iPadOS 27 kernel link inputs
+        if: inputs.os == '27'
+        run: git apply --verbose device/.github/patches/ipados27-kernel-link.patch
       - name: Backport the Mesa diagnostics patch fix
         if: inputs.os != '27'
         working-directory: UniXNU

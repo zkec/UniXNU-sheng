@@ -31,6 +31,11 @@ result = "The iPadOS 27 workflow pins UniXNU 0b6fa93eb48c0cc16e0a4647348730a2e21
 
 [[area.evidence]]
 kind = "source"
+reference = ".github/patches/ipados27-kernel-link.patch"
+result = "The iPadOS 27 package workflow guards macOS-only code-signing, Ethernet, AES, GPU pager and loader memory references in the native board and driver archives. The display driver exports the request layout used by the board diagnostics on both targets."
+
+[[area.evidence]]
+kind = "source"
 reference = "scripts/check-boot-watchdog-policy.py"
 result = "The lite=2 profile disables com.apple.iconservices.iconservicesagent in addition to the lite=1 jobs."
 
