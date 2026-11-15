@@ -195,6 +195,15 @@ jobs:
           if not path.is_file() and os.environ['INIT_DATA'] != 'true':
               raise SystemExit('No saved seed. Supply the ORIGINAL seed for an existing installation, or select init_data for a FIRST installation')
           PY
+      - name: Check iPadOS 27 kernel prelink
+        if: inputs.os == '27' && hashFiles('UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr') != ''
+        working-directory: UniXNU
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          seed=out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr
+          ./unixnu defconfig sheng_ipados27_defconfig -D ../device --os 27
+          ./unixnu build kernel -D ../device --os 27 --data-ramdisk "$seed"
       - name: package
         working-directory: device
         env:
@@ -208,6 +217,23 @@ jobs:
             args+=(--init-data)
           fi
           scripts/package.sh "${args[@]}"
+      - name: Report native kernel segment sizes on failure
+        if: failure() && inputs.os == '27'
+        working-directory: UniXNU
+        env:
+          PYTHONPATH: kits/XnuPrelink
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from kc_image import Image
+
+          root = Path('out/sheng/ipados-27.0.1-24A446/sheng_ipados27/tree/build/xnu')
+          kernel = root / 'ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf'
+          if kernel.is_file():
+              for segment in Image(kernel.read_bytes()).segments:
+                  if segment['name'] in ('__TEXT', '__TEXT_EXEC', '__KLD', '__DATA_CONST', '__DATA'):
+                      print(f"{segment['name']}: {segment['size']:,} bytes")
+          PY
       - uses: actions/cache/save@v4
         if: always() && inputs.os == '27' && steps.data-cache.outputs.cache-hit != 'true' && hashFiles('UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr') != ''
         with:

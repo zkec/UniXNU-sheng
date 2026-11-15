@@ -1,4 +1,6 @@
 CONFIG_XNU_BUILD_ARCHIVES=y
+# Fit the native executable and KLD segments in the 24A446 collection's code range.
+CONFIG_XNU_EXTRA_CFLAGS="-Wno-reserved-identifier -Wno-pre-c11-compat -Wno-missing-designated-field-initializers -Wno-suggest-override -Wno-unnecessary-virtual-specifier -Wno-suggest-destructor-override -Wno-ms-bitfield-padding -Os"
 CONFIG_XNU_CRYPTO_BOOTSTRAP="source"
 CONFIG_XNU_DT_PANIC_REGION=y
 CONFIG_XNU_ARMVIRT_PLATFORM=n
