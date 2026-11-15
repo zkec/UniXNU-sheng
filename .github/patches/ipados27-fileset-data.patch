@@ -1,0 +1,85 @@
+diff --git a/fileset_layout.py b/fileset_layout.py
+index 384818e..aeb7329 100644
+--- a/fileset_layout.py
++++ b/fileset_layout.py
+@@ -115,7 +115,6 @@ class Layout:
+             raise ValueError('Native code would collide with collection data')
+         self.roots.pop('__TEXT_BOOT_EXEC', None)
+         code['size'] = code['filesize'] = code_end - code['va']
+-        self.reserve('__DATA', self.roots['__DATA']['va'])
+         link = self.roots['__LINKEDIT']
+         for name in ('__LINKINFO', '__LINKEDIT'):
+             self.reserve(name, self.allocate(self.segment(name)['size']))
+@@ -128,8 +127,9 @@ class Layout:
+         self.table_end = self.cursor
+         link['size'] = link['filesize'] = self.cursor - link['fileoff']
+         info = self.roots['__PRELINK_INFO']
+-        info['va'] = self.allocate(info['size'])
+-        info['fileoff'] = info['va'] - cache.base
++        info_address = self.allocate(info['size'])
++        self.roots['__PRELINK_INFO'] = dict(info, va=info_address, fileoff=info_address - cache.base)
++        self.place_data(info, code_end)
+         for name in ('__KLDDATA', '__BOOTDATA'):
+             segment = self.segment(name)
+             address = self.allocate(segment['size'])
+@@ -159,6 +159,23 @@ class Layout:
+     def reserve(self, name, address):
+         self.placements[name] = address
+ 
++    def place_data(self, old_info, code_end):
++        """Keep native writable data before retained kext data for arm_vm_init."""
++        data = self.roots['__DATA']
++        begin = data['va']
++        extra = align(max(0, self.span('__DATA') - self.room('__DATA', begin)))
++        if extra:
++            # The XML has a new mapping. Extend into its old trailing pages,
++            # keeping the existing data addresses and the end of the root fixed.
++            floor = align(max(old_info['va'], code_end))
++            if (old_info['va'] + old_info['size'] != begin
++                    or old_info['fileoff'] + old_info['filesize'] != data['fileoff']
++                    or begin - extra < floor):
++                raise ValueError(f'Native __DATA needs {extra:#x} extra bytes before retained kext data')
++            data.update(va=begin - extra, fileoff=data['fileoff'] - extra,
++                        size=data['size'] + extra, filesize=data['filesize'] + extra)
++        self.reserve('__DATA', data['va'])
++
+     def span(self, name):
+         """Bytes of a native segment in the collection: its size, or for __TEXT what the hole lets it map."""
+         return self.mapped.get(name, self.segment(name)['size'])
+diff --git a/test_fileset_layout.py b/test_fileset_layout.py
+index 79f137c..24dbb1a 100644
+--- a/test_fileset_layout.py
++++ b/test_fileset_layout.py
+@@ -153,5 +153,32 @@ class TextPlacementTests(unittest.TestCase):
+         with self.assertRaisesRegex(ValueError, 'No room'):
+             layout.hole('__PRELINK_TEXT', layout.used('__TEXT'))
+ 
++class DataPlacementTests(unittest.TestCase):
++    def layout(self, size):
++        layout = object.__new__(Layout)
++        layout.native = SimpleNamespace(segments=[dict(name='__DATA', size=size)])
++        layout.roots = {'__DATA': dict(va=0x80000, fileoff=0x40000, size=0x30000, filesize=0x30000)}
++        layout.occupied = [(0x98000, 0x98100)]
++        layout.placements, layout.mapped = {}, {}
++        return layout
++
++    def test_data_uses_only_the_pages_it_needs_from_relocated_metadata(self):
++        old_info = dict(va=0x70000, fileoff=0x30000, size=0x10000, filesize=0x10000)
++        for size, extra in ((0x18000, 0), (0x1c000, 0x4000)):
++            with self.subTest(size=size):
++                layout = self.layout(size)
++                layout.place_data(old_info, code_end=0x78000)
++                self.assertEqual(layout.roots['__DATA'], dict(va=0x80000 - extra, fileoff=0x40000 - extra,
++                                                            size=0x30000 + extra, filesize=0x30000 + extra))
++                self.assertEqual(layout.end('__DATA'), 0x98000)
++
++    def test_data_cannot_extend_into_code_or_across_a_gap(self):
++        old_info = dict(va=0x70000, fileoff=0x30000, size=0x10000, filesize=0x10000)
++        with self.assertRaisesRegex(ValueError, 'Native __DATA needs'):
++            self.layout(0x1c000).place_data(old_info, code_end=0x7c001)
++        with self.assertRaisesRegex(ValueError, 'Native __DATA needs'):
++            self.layout(0x1c000).place_data(dict(old_info, size=0xc000), code_end=0x78000)
++
++
+ if __name__ == '__main__':
+     unittest.main()

@@ -41,6 +41,11 @@ result = "The iPadOS 27 defconfig adds -Os to reduce native text in the 24A446 c
 
 [[area.evidence]]
 kind = "source"
+reference = ".github/patches/ipados27-fileset-data.patch"
+result = "The iPadOS 27 prelinker can extend the collection data mapping into trailing pages freed by relocating the prelink XML. The native kernel data stays before the retained kext data. The linked 24A446 kernel from Actions run 43763385646 requires 224 KiB more than the original data prefix. The pinned Apple cache and the reported native segment sizes reproduce the overlap and validate the revised placement."
+
+[[area.evidence]]
+kind = "source"
 reference = "scripts/check-boot-watchdog-policy.py"
 result = "The lite=2 profile disables com.apple.iconservices.iconservicesagent in addition to the lite=1 jobs."
 

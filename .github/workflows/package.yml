@@ -50,6 +50,10 @@ jobs:
       - name: Fix iPadOS 27 kernel link inputs
         if: inputs.os == '27'
         run: git apply --verbose device/.github/patches/ipados27-kernel-link.patch
+      - name: Make room for iPadOS 27 kernel data
+        if: inputs.os == '27'
+        working-directory: UniXNU/kits/XnuPrelink
+        run: git apply --verbose ../../../device/.github/patches/ipados27-fileset-data.patch
       - name: Backport the Mesa diagnostics patch fix
         if: inputs.os != '27'
         working-directory: UniXNU
